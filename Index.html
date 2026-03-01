@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Verify — Truth in your hands</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0C0C10; --surface: #13131A; --surface2: #1A1A24;
+    --border: #2A2A38; --text: #E8E8F0; --muted: #7070A0; --accent: #C8B8FF;
+    --verified: #2ECC8A; --verified-bg: #0D2B1E;
+    --uncertain: #F5C842; --uncertain-bg: #2B2510;
+    --misleading: #FF6B35; --misleading-bg: #2B1508;
+    --false: #FF3D5A; --false-bg: #2B0B12;
+    --unverifiable: #8888AA; --unverifiable-bg: #16161E;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'Instrument Sans', sans-serif; min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+  .topbar { padding: 56px 24px 20px; text-align: center; }
+  .app-name { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .app-tagline { font-family: 'DM Serif Display', serif; font-size: 28px; color: var(--text); }
+  .app-tagline em { font-style: italic; color: var(--accent); }
+  .setup-screen { flex: 1; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+  .setup-screen.hidden { display: none; }
+  .setup-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 24px; }
+  .setup-card h2 { font-family: 'DM Serif Display', serif; font-size: 22px; margin-bottom: 8px; }
+  .setup-card p { color: var(--muted); font-size: 14px; line-height: 1.6; margin-bottom: 16px; }
+  .key-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; padding: 14px 16px; outline: none; -webkit-appearance: none; margin-bottom: 12px; }
+  .key-input:focus { border-color: var(--accent); }
+  .key-input::placeholder { color: var(--muted); }
+  .btn-primary { width: 100%; background: var(--accent); color: #0C0C10; border: none; border-radius: 12px; padding: 16px; font-family: 'Instrument Sans', sans-serif; font-size: 16px; font-weight: 600; cursor: pointer; -webkit-appearance: none; }
+  .btn-primary:active { opacity: 0.85; }
+  .btn-primary:disabled { opacity: 0.4; }
+  .security-note { display: flex; gap: 10px; align-items: flex-start; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+  .security-note p { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .main-screen { flex: 1; padding: 16px 20px 40px; display: flex; flex-direction: column; gap: 16px; }
+  .main-screen.hidden { display: none; }
+  .input-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 20px; }
+  .input-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; display: block; }
+  textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: 'Instrument Sans', sans-serif; font-size: 16px; line-height: 1.5; padding: 14px; resize: none; height: 90px; outline: none; -webkit-appearance: none; margin-bottom: 14px; }
+  textarea::placeholder { color: var(--muted); }
+  textarea:focus { border-color: var(--accent); }
+  .examples-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; display: block; }
+  .examples { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 14px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .examples::-webkit-scrollbar { display: none; }
+  .pill { background: var(--surface2); border: 1px solid var(--border); border-radius: 100px; padding: 7px 14px; font-size: 12px; color: var(--muted); cursor: pointer; white-space: nowrap; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
+  .pill:active { border-color: var(--accent); color: var(--accent); }
+  .loading-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 36px 24px; text-align: center; display: none; }
+  .loading-card.visible { display: block; }
+  .spinner { width: 44px; height: 44px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-card p { color: var(--muted); font-size: 13px; }
+  .loading-stage { color: var(--accent); font-size: 12px; font-family: 'DM Mono', monospace; margin-top: 6px; }
+  .not-claim-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 32px 24px; text-align: center; display: none; }
+  .not-claim-card.visible { display: block; }
+  .not-claim-card .big-icon { font-size: 40px; margin-bottom: 12px; }
+  .not-claim-card h3 { font-family: 'DM Serif Display', serif; font-size: 20px; margin-bottom: 8px; }
+  .not-claim-card p { color: var(--muted); font-size: 14px; line-height: 1.6; }
+  .error-card { background: var(--false-bg); border: 1px solid var(--false); border-radius: 20px; padding: 20px 24px; display: none; }
+  .error-card.visible { display: block; }
+  .error-card p { color: #FF8099; font-size: 14px; line-height: 1.6; }
+  .result-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; display: none; animation: slideUp 0.35s ease; }
+  .result-card.visible { display: block; }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .verdict-banner { padding: 24px 22px; display: flex; align-items: center; gap: 14px; }
+  .verdict-icon { font-size: 40px; flex-shrink: 0; }
+  .verdict-state { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.8; margin-bottom: 4px; }
+  .verdict-headline { font-family: 'DM Serif Display', serif; font-size: 20px; line-height: 1.2; }
+  .confidence-row { padding: 14px 22px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 12px; }
+  .conf-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); flex-shrink: 0; }
+  .conf-track { flex: 1; height: 5px; background: var(--border); border-radius: 100px; overflow: hidden; }
+  .conf-fill { height: 100%; border-radius: 100px; width: 0%; transition: width 1s ease; }
+  .conf-value { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text); flex-shrink: 0; }
+  .result-sections { padding: 0 22px 22px; }
+  .result-section { padding: 16px 0; border-top: 1px solid rgba(255,255,255,0.05); }
+  .section-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .claim-italic { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 15px; color: var(--muted); line-height: 1.5; }
+  .section-text { font-size: 14px; line-height: 1.7; color: #C0C0D8; }
+  .sources-list { display: flex; flex-direction: column; gap: 8px; }
+  .source-link { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; text-decoration: none; }
+  .source-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+  .source-title { font-size: 13px; color: var(--text); }
+  .reset-key { text-align: center; padding: 8px; }
+  .reset-key button { background: none; border: none; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; cursor: pointer; letter-spacing: 0.1em; }
+  .verdict-VERIFIED .verdict-banner { background: var(--verified-bg); }
+  .verdict-VERIFIED .verdict-headline { color: var(--verified); }
+  .verdict-VERIFIED .conf-fill { background: var(--verified); }
+  .verdict-UNCERTAIN .verdict-banner { background: var(--uncertain-bg); }
+  .verdict-UNCERTAIN .verdict-headline { color: var(--uncertain); }
+  .verdict-UNCERTAIN .conf-fill { background: var(--uncertain); }
+  .verdict-MISLEADING .verdict-banner { background: var(--misleading-bg); }
+  .verdict-MISLEADING .verdict-headline { color: var(--misleading); }
+  .verdict-MISLEADING .conf-fill { background: var(--misleading); }
+  .verdict-FALSE .verdict-banner { background: var(--false-bg); }
+  .verdict-FALSE .verdict-headline { color: var(--false); }
+  .verdict-FALSE .conf-fill { background: var(--false); }
+  .verdict-UNVERIFIABLE .verdict-banner { background: var(--unverifiable-bg); }
+  .verdict-UNVERIFIABLE .verdict-headline { color: var(--unverifiable); }
+  .verdict-UNVERIFIABLE .conf-fill { background: var(--unverifiable); }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <p class="app-name">Prototype v0.1</p>
+  <h1 class="app-tagline">Truth in your <em>hands.</em></h1>
+</div>
+<div class="setup-screen" id="setupScreen">
+  <div class="setup-card">
+    <h2>Enter your API Key</h2>
+    <p>Your Anthropic API key powers the verification engine. It stays on this device and is never shared.</p>
+    <input class="key-input" type="password" id="apiKeyInput" placeholder="sk-ant-api03-..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <button class="btn-primary" onclick="saveKey()">Start verifying</button>
+  </div>
+  <div class="security-note">
+    <span style="font-size:16px;flex-shrink:0">🔒</span>
+    <p>Your API key is stored locally on this device only. It is never transmitted anywhere except directly to Anthropic's servers.</p>
+  </div>
+</div>
+<div class="main-screen hidden" id="mainScreen">
+  <div class="input-card">
+    <label class="input-label">Paste or type a claim</label>
+    <textarea id="claimInput" placeholder="e.g. We only use 10% of our brains..."></textarea>
+    <span class="examples-label">Try an example</span>
+    <div class="examples">
+      <div class="pill" onclick="setEx(this)">We only use 10% of our brains</div>
+      <div class="pill" onclick="setEx(this)">Vaccines cause autism</div>
+      <div class="pill" onclick="setEx(this)">The Great Wall is visible from space</div>
+      <div class="pill" onclick="setEx(this)">Einstein failed math as a child</div>
+      <div class="pill" onclick="setEx(this)">Sugar makes kids hyperactive</div>
+      <div class="pill" onclick="setEx(this)">Drinking 8 glasses of water daily is essential</div>
+    </div>
+    <button class="btn-primary" id="verifyBtn" onclick="verify()">⟡ Verify this claim</button>
+  </div>
+  <div class="loading-card" id="loadingCard">
+    <div class="spinner"></div>
+    <p>Running verification engine...</p>
+    <p class="loading-stage" id="loadingStage">Stage 1 — Claim detection</p>
+  </div>
+  <div class="not-claim-card" id="notClaimCard">
+    <div class="big-icon">◎</div>
+    <h3>Not a checkable claim</h3>
+    <p id="notClaimReason">This does not appear to be a verifiable factual statement.</p>
+  </div>
+  <div class="error-card" id="errorCard">
+    <p id="errorMsg">Something went wrong. Please try again.</p>
+  </div>
+  <div class="result-card" id="resultCard">
+    <div class="verdict-banner">
+      <div class="verdict-icon" id="vIcon"></div>
+      <div class="verdict-info">
+        <div class="verdict-state" id="vState"></div>
+        <div class="verdict-headline" id="vHeadline"></div>
+      </div>
+    </div>
+    <div class="confidence-row">
+      <span class="conf-label">Confidence</span>
+      <div class="conf-track"><div class="conf-fill" id="confFill"></div></div>
+      <span class="conf-value" id="confValue"></span>
+    </div>
+    <div class="result-sections">
+      <div class="result-section">
+        <div class="section-label">Claim assessed</div>
+        <div class="claim-italic" id="claimEcho"></div>
+      </div>
+      <div class="result-section">
+        <div class="section-label">Verdict</div>
+        <p class="section-text" id="plainVerdict"></p>
+      </div>
+      <div class="result-section">
+        <div class="section-label">What you should also know</div>
+        <p class="section-text" id="contextText"></p>
+      </div>
+      <div class="result-section">
+        <div class="section-label">Sources</div>
+        <div class="sources-list" id="sourcesList"></div>
+      </div>
+    </div>
+  </div>
+  <div class="reset-key"><button onclick="resetKey()">⟳ Change API key</button></div>
+</div>
+<script>
+const VERDICTS = {
+  VERIFIED:     { icon: "✅", state: "Verified",     headline: "This checks out." },
+  UNCERTAIN:    { icon: "⚠️", state: "Uncertain",    headline: "This is contested or unclear." },
+  MISLEADING:   { icon: "❗", state: "Misleading",   headline: "Technically true, but misleading." },
+  FALSE:        { icon: "❌", state: "False",         headline: "This is not accurate." },
+  UNVERIFIABLE: { icon: "◯", state: "Unverifiable", headline: "We can't confirm this either way." }
+};
+const S1 = `You are a claim detection filter for a real-time information verification system. Determine whether the text is a checkable factual claim — one that asserts something objectively true and can be verified with evidence. Do NOT classify opinions, questions, vague assertions, or calls to action as checkable claims. Respond in JSON only, no markdown fences: {"is_checkable": true or false, "reason": "one sentence"}`;
+const S2 = `You are a precise, impartial fact-verification engine. Assess the claim and return a structured verdict. Use one of: VERIFIED, UNCERTAIN, MISLEADING, FALSE, UNVERIFIABLE. Confidence is 0-100 (be conservative). plain_verdict is one plain-language sentence. context is 2-3 sentences of background. sources lists 1-3 reputable references. Respond in JSON only, no markdown fences: {"verdict":"...","confidence":0-100,"plain_verdict":"...","context":"...","sources":[{"title":"...","url":"..."}]}`;
+function saveKey() {
+  const k = document.getElementById('apiKeyInput').value.trim();
+  if (!k || !k.startsWith('sk-')) { alert('Please enter a valid Anthropic API key starting with sk-'); return; }
+  sessionStorage.setItem('wi_key', k);
+  document.getElementById('setupScreen').classList.add('hidden');
+  document.getElementById('mainScreen').classList.remove('hidden');
+}
+function resetKey() {
+  sessionStorage.removeItem('wi_key');
+  document.getElementById('mainScreen').classList.add('hidden');
+  document.getElementById('setupScreen').classList.remove('hidden');
+}
+function getKey() { return sessionStorage.getItem('wi_key'); }
+window.addEventListener('load', () => { if (getKey()) { document.getElementById('setupScreen').classList.add('hidden'); document.getElementById('mainScreen').classList.remove('hidden'); } });
+function setEx(el) { document.getElementById('claimInput').value = el.textContent; }
+function hideResults() {
+  ['loadingCard','notClaimCard','errorCard'].forEach(id => document.getElementById(id).classList.remove('visible'));
+  document.getElementById('resultCard').className = 'result-card';
+}
+async function callClaude(sys, msg) {
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-api-key": getKey(), "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, system: sys, messages: [{ role: "user", content: msg }] })
+  });
+  const d = await r.json();
+  if (d.error) throw new Error(d.error.message);
+  return JSON.parse(d.content[0].text.trim());
+}
+async function verify() {
+  const claim = document.getElementById('claimInput').value.trim();
+  if (!claim) return;
+  const btn = document.getElementById('verifyBtn');
+  btn.disabled = true;
+  hideResults();
+  document.getElementById('loadingCard').classList.add('visible');
+  document.getElementById('loadingStage').textContent = 'Stage 1 — Claim detection';
+  try {
+    const s1 = await callClaude(S1, claim);
+    if (!s1.is_checkable) {
+      hideResults();
+      document.getElementById('notClaimReason').textContent = s1.reason + " Stage 1 filtered this correctly.";
+      document.getElementById('notClaimCard').classList.add('visible');
+      btn.disabled = false; return;
+    }
+    document.getElementById('loadingStage').textContent = 'Stage 2 — Accuracy verification';
+    const result = await callClaude(S2, claim);
+    hideResults();
+    renderResult(claim, result);
+  } catch(e) {
+    hideResults();
+    document.getElementById('errorMsg').textContent = "Error: " + e.message;
+    document.getElementById('errorCard').classList.add('visible');
+  }
+  btn.disabled = false;
+}
+function renderResult(claim, r) {
+  const card = document.getElementById('resultCard');
+  const v = VERDICTS[r.verdict] || VERDICTS.UNVERIFIABLE;
+  card.className = 'result-card visible verdict-' + (r.verdict || 'UNVERIFIABLE');
+  document.getElementById('vIcon').textContent = v.icon;
+  document.getElementById('vState').textContent = v.state;
+  document.getElementById('vHeadline').textContent = v.headline;
+  document.getElementById('claimEcho').textContent = '\u201c' + claim + '\u201d';
+  document.getElementById('plainVerdict').textContent = r.plain_verdict || '';
+  document.getElementById('contextText').textContent = r.context || '';
+  document.getElementById('confValue').textContent = (r.confidence || 0) + '%';
+  setTimeout(() => { document.getElementById('confFill').style.width = (r.confidence || 0) + '%'; }, 100);
+  const list = document.getElementById('sourcesList');
+  list.innerHTML = '';
+  (r.sources || []).forEach(s => {
+    const a = document.createElement('a');
+    a.className = 'source-link'; a.href = s.url || '#'; a.target = '_blank'; a.rel = 'noopener';
+    a.innerHTML = '<div class="source-dot"></div><span class="source-title">' + s.title + '</span>';
+    list.appendChild(a);
+  });
+}
+</script>
+</body>
+</html>
